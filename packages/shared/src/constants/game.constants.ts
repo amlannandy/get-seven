@@ -2,6 +2,7 @@ export const WINNING_SCORE = 200;
 export const FLIP7_BONUS = 15;
 export const FLIP7_UNIQUE_CARDS_NEEDED = 7;
 export const TURN_TIMEOUT_MS = 30_000;
+export const ACTION_TARGET_TIMEOUT_MS = 15_000;
 export const SECOND_CHANCE_WINDOW_MS = 5_000;
 export const ROUND_END_PAUSE_MS = 5_000;
 export const MIN_PLAYERS_TO_START = 2;
@@ -11,8 +12,7 @@ export const GAME_STATE_TTL_SECONDS = 7_200; // 2 hours
 export const SESSION_TTL_SECONDS = 1_800; // 30 minutes
 export const ROOM_CLEANUP_DELAY_MS = 20 * 60 * 1_000; // 20 minutes
 
-// Deck composition
-export const DECK_TOTAL = 94;
+// ─── Deck composition ────────────────────────────────────────────────────────
 
 export const NUMBER_CARD_COUNTS: Record<number, number> = {
   0: 1,
@@ -44,3 +44,9 @@ export const ACTION_CARD_COUNTS = {
   flip_three: 3,
   second_chance: 3,
 } as const;
+
+/** Computed from the counts above — always stays in sync. */
+export const DECK_TOTAL =
+  (Object.values(NUMBER_CARD_COUNTS) as number[]).reduce((a, b) => a + b, 0) +
+  (Object.values(MODIFIER_CARD_COUNTS) as number[]).reduce((a, b) => a + b, 0) +
+  (Object.values(ACTION_CARD_COUNTS) as number[]).reduce((a, b) => a + b, 0);

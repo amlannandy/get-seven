@@ -1,6 +1,6 @@
-import { Card } from '../types/card.types';
-import { PublicGameState, GameAction } from '../types/game.types';
-import { RoomPlayer } from '../types/room.types';
+import type { ActionKind, Card } from '../types/card.types';
+import type { GameAction, PublicGameState } from '../types/game.types';
+import type { RoomPlayer } from '../types/room.types';
 
 /**
  * Events emitted BY the server TO clients.
@@ -10,31 +10,31 @@ import { RoomPlayer } from '../types/room.types';
 export interface ServerToClientEvents {
   // ─── Lobby namespace (/lobby) ────────────────────────────────────────────
 
-  /** Full lobby snapshot, sent on join and whenever the player list changes. */
+  /** Full lobby snapshot — sent on join and whenever the player list changes. */
   'lobby:state': (payload: {
     roomId: string;
     roomCode: string;
     maxPlayers: number;
     players: RoomPlayer[];
-    canStart: boolean; // host + min players present
-  }) => void;
-
-  /** Broadcast when a new player joins the lobby. */
-  'lobby:player_joined': (payload: { player: RoomPlayer }) => void;
-
-  /** Broadcast when a player disconnects or leaves the lobby. */
-  'lobby:player_left': (payload: {
-    playerId: string;
-    newHostId: string | null; // set if host transferred
+    canStart: boolean;
   }) => void;
 
   /** Sent to the joining player to confirm their identity. */
   'lobby:joined': (payload: { yourPlayerId: string; roomId: string }) => void;
 
+  /** Broadcast when a new player joins the lobby. */
+  'lobby:player_joined': (payload: { player: RoomPlayer }) => void;
+
+  /** Broadcast when a player disconnects or leaves. */
+  'lobby:player_left': (payload: {
+    playerId: string;
+    newHostId: string | null; // set if host was transferred
+  }) => void;
+
   /** Broadcast when game transitions from waiting → in_progress. */
   'lobby:game_starting': () => void;
 
-  /** Error response (e.g. room not found, name taken, room full). */
+  /** Error response (room not found, name taken, room full, etc.). */
   'lobby:error': (payload: {
     code:
       | 'ROOM_NOT_FOUND'
@@ -48,29 +48,20 @@ export interface ServerToClientEvents {
 
   // ─── Game namespace (/game) ──────────────────────────────────────────────
 
-  /**
-   * Sent to every player when the game starts.
-   * yourPlayerId lets the client know which hand is theirs.
-   */
+  /** Sent to every player when the game starts. */
   'game:started': (payload: { gameState: PublicGameState; yourPlayerId: string }) => void;
 
-  /**
-   * Broadcast after every state-changing event.
-   * action describes what just happened (for animations / logs).
-   */
+  /** Broadcast after every state-changing action (hit, stay, etc.). */
   'game:state_update': (payload: { gameState: PublicGameState; action: GameAction }) => void;
 
-  /**
-   * Sent ONLY to the active player when it is their turn.
-   * Client should start a countdown timer.
-   */
+  /** Sent ONLY to the active player when it becomes their turn. */
   'game:your_turn': (payload: {
     timeoutMs: number;
-    expiresAt: number; // epoch ms — lets client sync without drift
+    expiresAt: number; // epoch ms — client uses this to avoid drift
   }) => void;
 
   /**
-   * Sent ONLY to the busting player when they hold a Second Chance.
+   * Sent ONLY to a player who drew a duplicate number card while holding Second Chance.
    * They have SECOND_CHANCE_WINDOW_MS to emit game:use_second_chance.
    */
   'game:bust_warning': (payload: {
@@ -79,35 +70,45 @@ export interface ServerToClientEvents {
     windowMs: number;
   }) => void;
 
-  /** Broadcast at the end of each round with scores. */
-  'game:round_end': (payload: {
-    roundNumber: number;
-    roundScores: Record<string, number>; // playerId → round score
-    cumulativeScores: Record<string, number>;
-    flip7PlayerId: string | null; // who triggered Flip 7, if anyone
+  /**
+   * Sent ONLY to the player who drew a Freeze or Flip Three card.
+   * They must emit game:select_action_target within ACTION_TARGET_TIMEOUT_MS.
+   * If they time out, the server auto-selects themselves as the target.
+   */
+  'game:select_target': (payload: {
+    action: ActionKind;
+    validTargetIds: string[]; // active playerIds (including self)
+    timeoutMs: number;
+    expiresAt: number;
   }) => void;
 
-  /** Broadcast when the game ends. */
+  /** Broadcast at the end of each round with final scores. */
+  'game:round_end': (payload: {
+    roundNumber: number;
+    roundScores: Record<string, number>;
+    cumulativeScores: Record<string, number>;
+    flip7PlayerId: string | null;
+  }) => void;
+
+  /** Broadcast when the game ends (someone reached WINNING_SCORE). */
   'game:over': (payload: {
     winnerId: string;
     winnerName: string;
     finalScores: Record<string, number>;
   }) => void;
 
-  /** Error response for invalid game actions. */
+  /** Error response for invalid in-game actions. */
   'game:error': (payload: {
     code:
       | 'NOT_YOUR_TURN'
       | 'INVALID_ACTION'
       | 'ROOM_NOT_FOUND'
       | 'GAME_NOT_ACTIVE'
-      | 'ALREADY_DONE';
+      | 'ALREADY_DONE'
+      | 'INVALID_TARGET';
     message: string;
   }) => void;
 
-  /**
-   * Sent to a reconnecting player to restore their game view.
-   * Same shape as game:started.
-   */
+  /** Sent to a reconnecting player to restore their full game view. */
   'game:reconnected': (payload: { gameState: PublicGameState; yourPlayerId: string }) => void;
 }
