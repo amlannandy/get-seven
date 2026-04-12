@@ -1,0 +1,15 @@
+{
+  "name": "get-seven",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:api": "pnpm --filter @flip7/api dev",
+    "dev:web": "pnpm --filter @flip7/web dev",
+    "build": "pnpm --filter @flip7/shared build && pnpm --filter @flip7/api build && pnpm --filter @flip7/web build",
+    "test": "pnpm -r test",
+    "test:api": "pnpm --filter @flip7/api test"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}
