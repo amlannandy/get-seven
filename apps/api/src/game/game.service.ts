@@ -11,13 +11,20 @@ import {
   SECOND_CHANCE_WINDOW_MS,
   TURN_TIMEOUT_MS,
 } from '@flip7/shared';
-import type { GameState, PublicGameState, PublicPlayerState } from '@flip7/shared';
+import type {
+  GameState,
+  PublicGameState,
+  PublicPlayerState,
+} from '@flip7/shared';
 import { GameEngineService } from './game-engine.service';
 import { ScoringService } from './scoring.service';
 import { DeckService } from './deck.service';
 import { GameStateService } from './game-state.service';
 import { Room } from '../rooms/entities/room.entity';
-import type { TurnTimeoutJobData } from '../scheduler/turn-timeout.processor';
+import type {
+  ActionTimeoutJobData,
+  TurnTimeoutJobData,
+} from '../scheduler/turn-timeout.processor';
 import type { RoomCleanupJobData } from '../scheduler/room-cleanup.processor';
 
 @Injectable()
@@ -90,7 +97,11 @@ export class GameService {
     if (!state) return;
 
     if (state.phase !== 'player_turn' && state.phase !== 'flip_three') {
-      this.emitPlayerError(playerId, 'INVALID_ACTION', 'Cannot hit in current phase');
+      this.emitPlayerError(
+        playerId,
+        'INVALID_ACTION',
+        'Cannot hit in current phase',
+      );
       return;
     }
 
@@ -157,7 +168,11 @@ export class GameService {
       }
 
       case 'action_target_needed':
-        await this.notifyActionTarget(roomId, result.newState, result.validTargets);
+        await this.notifyActionTarget(
+          roomId,
+          result.newState,
+          result.validTargets,
+        );
         break;
     }
   }
@@ -167,7 +182,11 @@ export class GameService {
     if (!state) return;
 
     if (state.phase !== 'player_turn') {
-      this.emitPlayerError(playerId, 'INVALID_ACTION', 'Cannot stay in current phase');
+      this.emitPlayerError(
+        playerId,
+        'INVALID_ACTION',
+        'Cannot stay in current phase',
+      );
       return;
     }
 
@@ -200,8 +219,15 @@ export class GameService {
     const state = await this.gameStateService.getState(roomId);
     if (!state) return;
 
-    if (state.phase !== 'bust_pending' || state.bustPendingPlayerId !== playerId) {
-      this.emitPlayerError(playerId, 'INVALID_ACTION', 'No bust pending for you');
+    if (
+      state.phase !== 'bust_pending' ||
+      state.bustPendingPlayerId !== playerId
+    ) {
+      this.emitPlayerError(
+        playerId,
+        'INVALID_ACTION',
+        'No bust pending for you',
+      );
       return;
     }
 
@@ -236,10 +262,14 @@ export class GameService {
       return;
     }
 
+    await this.cancelActionTimeout(roomId, state);
+
     const actionCard = state.pendingActionCard!;
     const validTargets =
       actionCard.action === 'second_chance'
-        ? state.playerStates.filter((ps) => !ps.hasSecondChance).map((ps) => ps.playerId)
+        ? state.playerStates
+            .filter((ps) => !ps.hasSecondChance)
+            .map((ps) => ps.playerId)
         : state.playerStates
             .filter((ps) => ps.status === 'active')
             .map((ps) => ps.playerId);
@@ -263,7 +293,9 @@ export class GameService {
       const nextCard = newState.pendingActionCard!;
       const nextTargets =
         nextCard.action === 'second_chance'
-          ? newState.playerStates.filter((ps) => !ps.hasSecondChance).map((ps) => ps.playerId)
+          ? newState.playerStates
+              .filter((ps) => !ps.hasSecondChance)
+              .map((ps) => ps.playerId)
           : newState.playerStates
               .filter((ps) => ps.status === 'active')
               .map((ps) => ps.playerId);
@@ -277,7 +309,10 @@ export class GameService {
     }
   }
 
-  async handlePlayerDisconnect(roomId: string, playerId: string): Promise<void> {
+  async handlePlayerDisconnect(
+    roomId: string,
+    playerId: string,
+  ): Promise<void> {
     const state = await this.gameStateService.getState(roomId);
     if (!state) return;
 
@@ -316,7 +351,9 @@ export class GameService {
       phase: state.phase,
       round: state.round,
       deckSize: state.deck.length,
-      activePlayerId: activeInTurn ? state.playerOrder[state.activePlayerIndex] : null,
+      activePlayerId: activeInTurn
+        ? state.playerOrder[state.activePlayerIndex]
+        : null,
       bustPendingPlayerId: state.bustPendingPlayerId,
       pendingActionCard: state.pendingActionCard,
       playerStates,
@@ -326,7 +363,10 @@ export class GameService {
 
   // ── Private helpers ─────────────────────────────────────────────────────────
 
-  private async advanceOrEndRound(roomId: string, state: GameState): Promise<void> {
+  private async advanceOrEndRound(
+    roomId: string,
+    state: GameState,
+  ): Promise<void> {
     if (this.engine.isRoundOver(state)) {
       await this.handleRoundEnd(roomId, state);
     } else {
@@ -334,9 +374,17 @@ export class GameService {
     }
   }
 
-  private async confirmBustIfPending(roomId: string, playerId: string): Promise<void> {
+  private async confirmBustIfPending(
+    roomId: string,
+    playerId: string,
+  ): Promise<void> {
     const state = await this.gameStateService.getState(roomId);
-    if (!state || state.phase !== 'bust_pending' || state.bustPendingPlayerId !== playerId) return;
+    if (
+      !state ||
+      state.phase !== 'bust_pending' ||
+      state.bustPendingPlayerId !== playerId
+    )
+      return;
 
     const newState = this.engine.confirmBust(state);
     await this.gameStateService.setState(roomId, newState);
@@ -356,19 +404,24 @@ export class GameService {
     }
   }
 
-  private async handleRoundEnd(roomId: string, state: GameState): Promise<void> {
+  private async handleRoundEnd(
+    roomId: string,
+    state: GameState,
+  ): Promise<void> {
     const scoredState = this.scoringService.applyRoundScores(state);
     await this.gameStateService.setState(roomId, scoredState);
 
     const roundScores: Record<string, number> = {};
-    for (const ps of scoredState.playerStates) roundScores[ps.playerId] = ps.roundScore;
+    for (const ps of scoredState.playerStates)
+      roundScores[ps.playerId] = ps.roundScore;
 
     this.server.to(roomId).emit('game:round_end', {
       roundNumber: scoredState.round,
       roundScores,
       cumulativeScores: scoredState.cumulativeScores,
       flip7PlayerId:
-        scoredState.playerStates.find((ps) => ps.status === 'flip7')?.playerId ?? null,
+        scoredState.playerStates.find((ps) => ps.status === 'flip7')
+          ?.playerId ?? null,
     });
 
     if (scoredState.winnerId) {
@@ -378,7 +431,10 @@ export class GameService {
         winnerName: displayNames[scoredState.winnerId] ?? 'Unknown',
         finalScores: scoredState.cumulativeScores,
       });
-      await this.roomRepo.update(roomId, { status: 'finished', finishedAt: new Date() });
+      await this.roomRepo.update(roomId, {
+        status: 'finished',
+        finishedAt: new Date(),
+      });
       const cleanupData: RoomCleanupJobData = { roomId };
       await this.roomCleanupQueue.add('room-cleanup', cleanupData, {
         delay: ROOM_CLEANUP_DELAY_MS,
@@ -387,10 +443,16 @@ export class GameService {
       return;
     }
 
-    setTimeout(() => void this.startNextRound(roomId, scoredState), ROUND_END_PAUSE_MS);
+    setTimeout(
+      () => void this.startNextRound(roomId, scoredState),
+      ROUND_END_PAUSE_MS,
+    );
   }
 
-  private async startNextRound(roomId: string, prevState: GameState): Promise<void> {
+  private async startNextRound(
+    roomId: string,
+    prevState: GameState,
+  ): Promise<void> {
     const displayNames = await this.gameStateService.getDisplayNames(roomId);
     const players = prevState.playerOrder.map((id, idx) => ({
       id,
@@ -410,7 +472,11 @@ export class GameService {
 
     this.server.to(roomId).emit('game:state_update', {
       gameState: this.toPublicGameState(nextState, displayNames),
-      action: { type: 'round_start', playerId: '', payload: { round: nextState.round } },
+      action: {
+        type: 'round_start',
+        playerId: '',
+        payload: { round: nextState.round },
+      },
     });
 
     let currentState = nextState;
@@ -427,7 +493,10 @@ export class GameService {
     await this.notifyActivePlayer(roomId, currentState);
   }
 
-  private async notifyActivePlayer(roomId: string, state: GameState): Promise<void> {
+  private async notifyActivePlayer(
+    roomId: string,
+    state: GameState,
+  ): Promise<void> {
     const activePlayerId = state.playerOrder[state.activePlayerIndex];
     const now = Date.now();
     this.server.to(activePlayerId).emit('game:your_turn', {
@@ -451,8 +520,13 @@ export class GameService {
     return `turn-${roomId}-${state.round}-${state.activePlayerIndex}`;
   }
 
-  private async cancelTurnTimeout(roomId: string, state: GameState): Promise<void> {
-    const job = await this.turnTimeoutQueue.getJob(this.turnTimeoutJobId(roomId, state));
+  private async cancelTurnTimeout(
+    roomId: string,
+    state: GameState,
+  ): Promise<void> {
+    const job = await this.turnTimeoutQueue.getJob(
+      this.turnTimeoutJobId(roomId, state),
+    );
     await job?.remove();
   }
 
@@ -469,6 +543,31 @@ export class GameService {
       timeoutMs: ACTION_TARGET_TIMEOUT_MS,
       expiresAt: now + ACTION_TARGET_TIMEOUT_MS,
     });
+
+    const jobData: ActionTimeoutJobData = {
+      roomId,
+      playerId: activePlayerId,
+      round: state.round,
+      turnIndex: state.activePlayerIndex,
+    };
+    await this.turnTimeoutQueue.add('action-timeout', jobData, {
+      delay: ACTION_TARGET_TIMEOUT_MS,
+      jobId: this.actionTimeoutJobId(roomId, state),
+    });
+  }
+
+  private actionTimeoutJobId(roomId: string, state: GameState): string {
+    return `action-${roomId}-${state.round}-${state.activePlayerIndex}`;
+  }
+
+  private async cancelActionTimeout(
+    roomId: string,
+    state: GameState,
+  ): Promise<void> {
+    const job = await this.turnTimeoutQueue.getJob(
+      this.actionTimeoutJobId(roomId, state),
+    );
+    await job?.remove();
   }
 
   private emitPlayerError(
