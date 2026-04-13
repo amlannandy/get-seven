@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
 import { Repository } from 'typeorm';
+import { Queue } from 'bullmq';
 import { Server } from 'socket.io';
 import {
   ACTION_TARGET_TIMEOUT_MS,
+  ROOM_CLEANUP_DELAY_MS,
   ROUND_END_PAUSE_MS,
   SECOND_CHANCE_WINDOW_MS,
   TURN_TIMEOUT_MS,
@@ -14,6 +17,8 @@ import { ScoringService } from './scoring.service';
 import { DeckService } from './deck.service';
 import { GameStateService } from './game-state.service';
 import { Room } from '../rooms/entities/room.entity';
+import type { TurnTimeoutJobData } from '../scheduler/turn-timeout.processor';
+import type { RoomCleanupJobData } from '../scheduler/room-cleanup.processor';
 
 @Injectable()
 export class GameService {
@@ -25,6 +30,8 @@ export class GameService {
     private readonly deckService: DeckService,
     private readonly gameStateService: GameStateService,
     @InjectRepository(Room) private readonly roomRepo: Repository<Room>,
+    @InjectQueue('turn-timeout') private readonly turnTimeoutQueue: Queue,
+    @InjectQueue('room-cleanup') private readonly roomCleanupQueue: Queue,
   ) {}
 
   /** Called by GameGateway.afterInit so the service can emit events. */
@@ -92,6 +99,8 @@ export class GameService {
       this.emitPlayerError(playerId, 'NOT_YOUR_TURN', 'It is not your turn');
       return;
     }
+
+    await this.cancelTurnTimeout(roomId, state);
 
     const drawnCard = state.deck[0];
     if (!drawnCard) return; // should not happen — engine rebuilds on applyDeal
@@ -167,6 +176,8 @@ export class GameService {
       this.emitPlayerError(playerId, 'NOT_YOUR_TURN', 'It is not your turn');
       return;
     }
+
+    await this.cancelTurnTimeout(roomId, state);
 
     const stayedState = this.engine.applyStay(state);
     const displayNames = await this.gameStateService.getDisplayNames(roomId);
@@ -368,11 +379,14 @@ export class GameService {
         finalScores: scoredState.cumulativeScores,
       });
       await this.roomRepo.update(roomId, { status: 'finished', finishedAt: new Date() });
-      // TODO Phase 5: enqueue room-cleanup BullMQ job
+      const cleanupData: RoomCleanupJobData = { roomId };
+      await this.roomCleanupQueue.add('room-cleanup', cleanupData, {
+        delay: ROOM_CLEANUP_DELAY_MS,
+        jobId: `cleanup-${roomId}`,
+      });
       return;
     }
 
-    // TODO Phase 5: replace with BullMQ delayed job for reliability
     setTimeout(() => void this.startNextRound(roomId, scoredState), ROUND_END_PAUSE_MS);
   }
 
@@ -420,7 +434,26 @@ export class GameService {
       timeoutMs: TURN_TIMEOUT_MS,
       expiresAt: now + TURN_TIMEOUT_MS,
     });
-    // TODO Phase 5: enqueue BullMQ turn-timeout job
+
+    const jobData: TurnTimeoutJobData = {
+      roomId,
+      playerId: activePlayerId,
+      round: state.round,
+      turnIndex: state.activePlayerIndex,
+    };
+    await this.turnTimeoutQueue.add('turn-timeout', jobData, {
+      delay: TURN_TIMEOUT_MS,
+      jobId: `turn-${roomId}-${state.round}-${state.activePlayerIndex}`,
+    });
+  }
+
+  private turnTimeoutJobId(roomId: string, state: GameState): string {
+    return `turn-${roomId}-${state.round}-${state.activePlayerIndex}`;
+  }
+
+  private async cancelTurnTimeout(roomId: string, state: GameState): Promise<void> {
+    const job = await this.turnTimeoutQueue.getJob(this.turnTimeoutJobId(roomId, state));
+    await job?.remove();
   }
 
   private async notifyActionTarget(
@@ -436,7 +469,6 @@ export class GameService {
       timeoutMs: ACTION_TARGET_TIMEOUT_MS,
       expiresAt: now + ACTION_TARGET_TIMEOUT_MS,
     });
-    // TODO Phase 5: enqueue BullMQ action-timeout job
   }
 
   private emitPlayerError(

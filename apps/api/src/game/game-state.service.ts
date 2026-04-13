@@ -73,4 +73,8 @@ export class GameStateService {
     const raw = await this.redis.get(this.namesKey(roomId));
     return raw ? (JSON.parse(raw) as Record<string, string>) : {};
   }
+
+  async deleteDisplayNames(roomId: string): Promise<void> {
+    await this.redis.del(this.namesKey(roomId));
+  }
 }
