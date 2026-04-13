@@ -1,5 +1,4 @@
 import { Test } from '@nestjs/testing';
-import { FLIP7_UNIQUE_CARDS_NEEDED } from '@flip7/shared';
 import type {
   ActionCard,
   Card,
@@ -227,9 +226,12 @@ describe('GameEngineService', () => {
       expect(target.hasSecondChance).toBe(true);
     });
 
-    it('throws when deck is empty', () => {
+    it('rebuilds and deals from a fresh deck when deck is empty', () => {
+      // Empty deck, no discard pile, no cards in hand — rebuildDeck produces full deck
       const state = makeState([makePlayer('p1')], [], { phase: 'dealing' });
-      expect(() => engine.applyDeal(state)).toThrow();
+      const { newState, card } = engine.applyDeal(state);
+      expect(card).toBeDefined();
+      expect(newState.deck.length).toBeGreaterThan(0);
     });
   });
 
@@ -332,11 +334,14 @@ describe('GameEngineService', () => {
   // ── applyHit — action cards ─────────────────────────────────────────────────
 
   describe('applyHit — action cards', () => {
-    it('returns second_chance_received and sets hasSecondChance', () => {
+    it('prompts for target when second_chance is drawn and valid targets exist', () => {
+      // p1 does not have a SC — they are a valid target for themselves
       const state = makeState([makePlayer('p1')]);
       const result = engine.applyHit(state, act('second_chance'));
-      expect(result.event).toBe('second_chance_received');
-      expect(result.newState.playerStates[0].hasSecondChance).toBe(true);
+      expect(result.event).toBe('action_target_needed');
+      if (result.event !== 'action_target_needed') return;
+      expect(result.validTargets).toContain('p1');
+      expect(result.newState.phase).toBe('action_pending');
     });
 
     it('auto-discards second_chance when player already has one', () => {
@@ -679,13 +684,14 @@ describe('GameEngineService', () => {
       expect(ps.deferredActions).toHaveLength(1);
       expect(ps.deferredActions[0].card.action).toBe('freeze');
 
-      // Card 3: number — flip_three_done, deferred freeze resolves
+      // Card 3: number — sequence ends, deferred freeze prompts for target
       result = engine.applyHit(s, num(2));
-      expect(result.event).toBe('flip_three_done');
-      const finalPs = result.newState.playerStates[0];
-      // Freeze was self-applied after sequence
-      expect(finalPs.status).toBe('frozen');
-      expect(finalPs.deferredActions).toHaveLength(0);
+      expect(result.event).toBe('action_target_needed');
+      if (result.event !== 'action_target_needed') return;
+      expect(result.newState.phase).toBe('action_pending');
+      expect(result.newState.pendingActionCard?.action).toBe('freeze');
+      // Deferred action consumed from the list
+      expect(result.newState.playerStates[0].deferredActions).toHaveLength(0);
     });
   });
 
