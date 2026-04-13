@@ -74,7 +74,7 @@
     "coverageDirectory": "../coverage",
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^@flip7/shared(.*)$": "<rootDir>/../../packages/shared/src$1"
+      "^@flip7/shared(.*)$": "<rootDir>/../../../packages/shared/src$1"
     }
   }
 }

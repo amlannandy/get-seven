@@ -78,4 +78,12 @@ export class DeckService {
   buildShuffledDeck(): Card[] {
     return this.shuffle(this.buildDeck());
   }
+
+  /**
+   * Rebuild a shuffled deck excluding cards that are already in play.
+   * Pass the IDs of all cards currently held in hands or the discard pile.
+   */
+  rebuildDeck(excludeIds: Set<string>): Card[] {
+    return this.shuffle(this.buildDeck().filter((c) => !excludeIds.has(c.id)));
+  }
 }
