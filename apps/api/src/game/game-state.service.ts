@@ -50,4 +50,27 @@ export class GameStateService {
   async deleteState(roomId: string): Promise<void> {
     await this.redis.del(this.key(roomId));
   }
+
+  // ── Display names ───────────────────────────────────────────────────────────
+
+  private namesKey(roomId: string): string {
+    return `game:${roomId}:names`;
+  }
+
+  async setDisplayNames(
+    roomId: string,
+    names: Record<string, string>,
+  ): Promise<void> {
+    await this.redis.set(
+      this.namesKey(roomId),
+      JSON.stringify(names),
+      'EX',
+      GAME_STATE_TTL_SECONDS,
+    );
+  }
+
+  async getDisplayNames(roomId: string): Promise<Record<string, string>> {
+    const raw = await this.redis.get(this.namesKey(roomId));
+    return raw ? (JSON.parse(raw) as Record<string, string>) : {};
+  }
 }

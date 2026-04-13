@@ -12,6 +12,7 @@ import type Redis from 'ioredis';
 import { MIN_PLAYERS_TO_START, SESSION_TTL_SECONDS } from '@flip7/shared';
 import type { RoomPlayer as RoomPlayerDto } from '@flip7/shared';
 import { REDIS_CLIENT } from '../redis/redis.module';
+import { GameService } from '../game/game.service';
 import { RoomsService } from './rooms.service';
 import type { Room } from './entities/room.entity';
 import type { RoomPlayer } from './entities/room-player.entity';
@@ -28,6 +29,7 @@ export class RoomsGateway implements OnGatewayDisconnect {
 
   constructor(
     private readonly roomsService: RoomsService,
+    private readonly gameService: GameService,
     @Inject(REDIS_CLIENT) private readonly redis: Redis,
   ) {}
 
@@ -206,7 +208,13 @@ export class RoomsGateway implements OnGatewayDisconnect {
     await this.roomsService.updateRoomStatus(roomId, 'in_progress');
     this.server.to(roomId).emit('lobby:game_starting');
 
-    // TODO: trigger GameService.startGame(roomId) — wired in GameModule phase
+    const players = room.players.map((p) => ({
+      id: p.id,
+      displayName: p.displayName,
+      seatIndex: p.seatIndex,
+    }));
+    // Fire-and-forget — dealing loop runs async while clients switch to /game
+    void this.gameService.startGame(roomId, players);
   }
 
   async handleDisconnect(client: Socket): Promise<void> {
