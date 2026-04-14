@@ -15,7 +15,7 @@ import GameOverScreen from '../components/game/GameOverScreen';
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId: string }>();
-  const { playerId, displayName } = usePlayerStore();
+  const { playerId } = usePlayerStore();
   const {
     gameState,
     yourPlayerId,
@@ -33,7 +33,7 @@ export default function GamePage() {
     getGameSocket(playerId, roomId);
   }
 
-  useGameEvents();
+  useGameEvents(playerId ?? null, roomId ?? null);
 
   useEffect(() => {
     if (!playerId || !roomId) return;

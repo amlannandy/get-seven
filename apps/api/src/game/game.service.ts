@@ -117,26 +117,42 @@ export class GameService {
     if (!drawnCard) return; // should not happen — engine rebuilds on applyDeal
 
     const result = this.engine.applyHit(state, drawnCard);
-    await this.gameStateService.setState(roomId, result.newState);
-
     const displayNames = await this.gameStateService.getDisplayNames(roomId);
-    this.server.to(roomId).emit('game:state_update', {
-      gameState: this.toPublicGameState(result.newState, displayNames),
-      action: result.newState.lastAction ?? { type: 'hit', playerId },
-    });
 
     switch (result.event) {
       case 'number_ok':
       case 'modifier_added':
-      case 'second_chance_received':
-        await this.advanceOrEndRound(roomId, result.newState);
+      case 'second_chance_received': {
+        // Advance turn after each card draw — one card per player per turn
+        const advanced = this.engine.advanceTurn(result.newState);
+        await this.gameStateService.setState(roomId, advanced);
+        this.server.to(roomId).emit('game:state_update', {
+          gameState: this.toPublicGameState(advanced, displayNames),
+          action: result.newState.lastAction ?? { type: 'hit', playerId },
+        });
+        if (advanced.phase === 'round_end') {
+          await this.handleRoundEnd(roomId, advanced);
+        } else {
+          await this.notifyActivePlayer(roomId, advanced);
+        }
         break;
+      }
 
       case 'flip7':
+        await this.gameStateService.setState(roomId, result.newState);
+        this.server.to(roomId).emit('game:state_update', {
+          gameState: this.toPublicGameState(result.newState, displayNames),
+          action: result.newState.lastAction ?? { type: 'hit', playerId },
+        });
         await this.handleRoundEnd(roomId, result.newState);
         break;
 
       case 'bust':
+        await this.gameStateService.setState(roomId, result.newState);
+        this.server.to(roomId).emit('game:state_update', {
+          gameState: this.toPublicGameState(result.newState, displayNames),
+          action: result.newState.lastAction ?? { type: 'hit', playerId },
+        });
         // Give the player SECOND_CHANCE_WINDOW_MS to use their SC card.
         this.server.to(playerId).emit('game:bust_warning', {
           duplicateCard: result.newState.bustDuplicateCard!,
@@ -151,6 +167,11 @@ export class GameService {
         break;
 
       case 'flip_three_card':
+        await this.gameStateService.setState(roomId, result.newState);
+        this.server.to(roomId).emit('game:state_update', {
+          gameState: this.toPublicGameState(result.newState, displayNames),
+          action: result.newState.lastAction ?? { type: 'hit', playerId },
+        });
         // Player still in flip-three sequence — they draw again
         await this.notifyActivePlayer(roomId, result.newState);
         break;
@@ -159,6 +180,10 @@ export class GameService {
         // Sequence complete. Advance turn away from the flip-three player.
         const advanced = this.engine.advanceTurn(result.newState);
         await this.gameStateService.setState(roomId, advanced);
+        this.server.to(roomId).emit('game:state_update', {
+          gameState: this.toPublicGameState(advanced, displayNames),
+          action: result.newState.lastAction ?? { type: 'hit', playerId },
+        });
         if (advanced.phase === 'round_end') {
           await this.handleRoundEnd(roomId, advanced);
         } else {
@@ -168,6 +193,11 @@ export class GameService {
       }
 
       case 'action_target_needed':
+        await this.gameStateService.setState(roomId, result.newState);
+        this.server.to(roomId).emit('game:state_update', {
+          gameState: this.toPublicGameState(result.newState, displayNames),
+          action: result.newState.lastAction ?? { type: 'hit', playerId },
+        });
         await this.notifyActionTarget(
           roomId,
           result.newState,
@@ -304,8 +334,18 @@ export class GameService {
       // Flip-three target now draws
       await this.notifyActivePlayer(roomId, newState);
     } else {
-      // player_turn — the acting player continues their turn (action card ≠ end of turn)
-      await this.advanceOrEndRound(roomId, newState);
+      // player_turn — action card resolved, advance turn (one card per player per turn)
+      const advanced = this.engine.advanceTurn(newState);
+      await this.gameStateService.setState(roomId, advanced);
+      this.server.to(roomId).emit('game:state_update', {
+        gameState: this.toPublicGameState(advanced, displayNames),
+        action: advanced.lastAction ?? newState.lastAction!,
+      });
+      if (advanced.phase === 'round_end') {
+        await this.handleRoundEnd(roomId, advanced);
+      } else {
+        await this.notifyActivePlayer(roomId, advanced);
+      }
     }
   }
 
@@ -363,17 +403,6 @@ export class GameService {
 
   // ── Private helpers ─────────────────────────────────────────────────────────
 
-  private async advanceOrEndRound(
-    roomId: string,
-    state: GameState,
-  ): Promise<void> {
-    if (this.engine.isRoundOver(state)) {
-      await this.handleRoundEnd(roomId, state);
-    } else {
-      await this.notifyActivePlayer(roomId, state);
-    }
-  }
-
   private async confirmBustIfPending(
     roomId: string,
     playerId: string,
@@ -397,6 +426,10 @@ export class GameService {
 
     const advanced = this.engine.advanceTurn(newState);
     await this.gameStateService.setState(roomId, advanced);
+    this.server.to(roomId).emit('game:state_update', {
+      gameState: this.toPublicGameState(advanced, displayNames),
+      action: advanced.lastAction ?? newState.lastAction!,
+    });
     if (advanced.phase === 'round_end') {
       await this.handleRoundEnd(roomId, advanced);
     } else {

@@ -743,10 +743,10 @@ export class GameEngineService {
       .map((ps) => ps.playerId);
   }
 
-  /** Valid targets for a Second Chance card: any player who does not already hold one. */
+  /** Valid targets for a Second Chance card: active players who don't already hold one. */
   private getValidSecondChanceTargets(state: GameState): string[] {
     return state.playerStates
-      .filter((ps) => !ps.hasSecondChance)
+      .filter((ps) => ps.status === 'active' && !ps.hasSecondChance)
       .map((ps) => ps.playerId);
   }
 

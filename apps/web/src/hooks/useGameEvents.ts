@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { getGameSocket } from '../lib/socket';
 import { useGameStore } from '../store/useGameStore';
 
-export function useGameEvents() {
+export function useGameEvents(playerId: string | null, roomId: string | null) {
   const {
     setGameState,
     updateGameState,
@@ -14,14 +14,21 @@ export function useGameEvents() {
   } = useGameStore();
 
   useEffect(() => {
-    // Socket must already be initialized by GamePage before this effect runs.
-    const socket = getGameSocket('', '');
+    if (!playerId || !roomId) return;
+    // Always call with real credentials so the singleton is created correctly
+    // even if Strict Mode teardown destroyed the previous instance.
+    const socket = getGameSocket(playerId, roomId);
 
     socket.on('game:reconnected', ({ gameState, yourPlayerId }) => {
+      console.log('Reconnected to game, syncing state', {
+        gameState,
+        yourPlayerId,
+      });
       setGameState(gameState, yourPlayerId);
     });
 
     socket.on('game:started', ({ gameState, yourPlayerId }) => {
+      console.log('Game started', { gameState, yourPlayerId });
       setGameState(gameState, yourPlayerId);
     });
 
@@ -33,7 +40,7 @@ export function useGameEvents() {
       setTurnExpiry(expiresAt);
     });
 
-    socket.on('game:bust_warning', (payload) => {
+    socket.on('game:bust_warning', payload => {
       setBustWarning(payload);
     });
 
@@ -41,11 +48,11 @@ export function useGameEvents() {
       setSelectTargetPrompt({ action, validTargetIds, expiresAt });
     });
 
-    socket.on('game:round_end', (payload) => {
+    socket.on('game:round_end', payload => {
       setRoundEnd(payload);
     });
 
-    socket.on('game:over', (payload) => {
+    socket.on('game:over', payload => {
       setGameOver(payload);
     });
 
@@ -59,5 +66,15 @@ export function useGameEvents() {
       socket.off('game:round_end');
       socket.off('game:over');
     };
-  }, [setGameState, updateGameState, setTurnExpiry, setBustWarning, setSelectTargetPrompt, setRoundEnd, setGameOver]);
+  }, [
+    playerId,
+    roomId,
+    setGameState,
+    updateGameState,
+    setTurnExpiry,
+    setBustWarning,
+    setSelectTargetPrompt,
+    setRoundEnd,
+    setGameOver,
+  ]);
 }
