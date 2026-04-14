@@ -1,0 +1,114 @@
+@import "tailwindcss";
+
+@theme {
+  /* ─── Fonts ─────────────────────────────────────────────────── */
+  --font-fredoka: "Fredoka", sans-serif;
+  --font-inter: "Inter", sans-serif;
+
+  /* ─── Table / Background ─────────────────────────────────────── */
+  --color-table-bg: #1a472a;
+  --color-table-felt: #2d6a4f;
+  --color-panel-bg: #1e3a2f;
+  --color-panel-border: #2d5a3d;
+
+  /* ─── UI Chrome ──────────────────────────────────────────────── */
+  --color-primary: #f59e0b;
+  --color-primary-hover: #d97706;
+  --color-danger: #ef4444;
+  --color-danger-hover: #dc2626;
+  --color-muted: #6b7280;
+  --color-flip7-gold: #fbbf24;
+  --color-frozen: #93c5fd;
+
+  /* ─── Card faces ─────────────────────────────────────────────── */
+  --color-card-face: #fefce8;
+
+  /* ─── Card value colors ───────────────────────────────────────── */
+  --color-card-0: #94a3b8;
+  --color-card-low: #4ade80;
+  --color-card-mid: #facc15;
+  --color-card-seven: #f97316;
+  --color-card-high: #f87171;
+  --color-card-top: #c084fc;
+  --color-card-modifier: #818cf8;
+  --color-card-freeze: #67e8f9;
+  --color-card-flip-three: #fb923c;
+  --color-card-second-chance: #86efac;
+}
+
+/* ─── Base reset ──────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100dvh;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-table-bg);
+  font-family: var(--font-inter);
+  color: #f1f5f9;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ─── Typography helpers ──────────────────────────────────────── */
+.font-fredoka {
+  font-family: var(--font-fredoka);
+}
+
+/* ─── Felt texture overlay (subtle noise via CSS) ────────────── */
+.felt-texture::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Scrollbar styling for opponent column ──────────────────── */
+.opponents-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-panel-border) transparent;
+}
+.opponents-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.opponents-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.opponents-scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-panel-border);
+  border-radius: 9999px;
+}
+
+/* ─── Turn timer animation ────────────────────────────────────── */
+@keyframes timer-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.timer-urgent {
+  animation: timer-pulse 0.8s ease-in-out infinite;
+}
+
+/* ─── Active player panel glow ───────────────────────────────── */
+@keyframes active-glow {
+  0%, 100% { box-shadow: 0 0 0 1px var(--color-primary); }
+  50% { box-shadow: 0 0 12px 2px var(--color-primary); }
+}
+
+.panel-active {
+  animation: active-glow 1.8s ease-in-out infinite;
+}
+
+/* ─── Flip 7 gold glow ───────────────────────────────────────── */
+@keyframes flip7-glow {
+  0%, 100% { box-shadow: 0 0 8px 2px var(--color-flip7-gold); }
+  50% { box-shadow: 0 0 24px 6px var(--color-flip7-gold); }
+}
+
+.panel-flip7 {
+  animation: flip7-glow 1.2s ease-in-out infinite;
+}

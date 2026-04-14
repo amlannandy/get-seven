@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "noEmit": true,
+    "paths": {
+      "@flip7/shared": ["../../packages/shared/src/index.ts"],
+      "@flip7/shared/*": ["../../packages/shared/src/*"]
+    }
+  },
+  "include": ["src"]
+}
