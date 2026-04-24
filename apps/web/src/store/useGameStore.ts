@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { PublicGameState, Card, ActionKind } from '@flip7/shared';
+import { create } from "zustand";
+import type { PublicGameState, Card, ActionKind } from "@flip7/shared";
 
 interface BustWarning {
   duplicateCard: Card;
@@ -69,38 +69,27 @@ export const useGameStore = create<GameState>()((set) => ({
   lastRoundEnd: null,
   gameOver: null,
 
-  setGameState: (gameState, yourPlayerId) =>
-    set({ gameState, yourPlayerId }),
+  setGameState: (gameState, yourPlayerId) => set({ gameState, yourPlayerId }),
 
-  updateGameState: (gameState) =>
-    set({ gameState }),
+  updateGameState: (gameState) => set({ gameState }),
 
-  setTurnExpiry: (expiresAt) =>
-    set({ turnExpiresAt: expiresAt }),
+  setTurnExpiry: (expiresAt) => set({ turnExpiresAt: expiresAt }),
 
-  clearTurnExpiry: () =>
-    set({ turnExpiresAt: null }),
+  clearTurnExpiry: () => set({ turnExpiresAt: null }),
 
-  setBustWarning: (warning) =>
-    set({ bustWarning: warning }),
+  setBustWarning: (warning) => set({ bustWarning: warning }),
 
-  clearBustWarning: () =>
-    set({ bustWarning: null }),
+  clearBustWarning: () => set({ bustWarning: null }),
 
-  setSelectTargetPrompt: (prompt) =>
-    set({ selectTargetPrompt: prompt }),
+  setSelectTargetPrompt: (prompt) => set({ selectTargetPrompt: prompt }),
 
-  clearSelectTargetPrompt: () =>
-    set({ selectTargetPrompt: null }),
+  clearSelectTargetPrompt: () => set({ selectTargetPrompt: null }),
 
-  setRoundEnd: (summary) =>
-    set({ lastRoundEnd: summary }),
+  setRoundEnd: (summary) => set({ lastRoundEnd: summary }),
 
-  clearRoundEnd: () =>
-    set({ lastRoundEnd: null }),
+  clearRoundEnd: () => set({ lastRoundEnd: null }),
 
-  setGameOver: (result) =>
-    set({ gameOver: result }),
+  setGameOver: (result) => set({ gameOver: result }),
 
   resetGame: () =>
     set({

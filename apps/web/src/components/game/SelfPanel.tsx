@@ -1,8 +1,8 @@
-import type { PublicPlayerState, Card } from '@flip7/shared';
-import PanelHeader from './PanelHeader';
-import CardRow from './CardRow';
-import TurnTimer from './TurnTimer';
-import ActionBar from './ActionBar';
+import type { PublicPlayerState, Card } from "@flip7/shared";
+import PanelHeader from "./PanelHeader";
+import CardRow from "./CardRow";
+import TurnTimer from "./TurnTimer";
+import ActionBar from "./ActionBar";
 
 interface Props {
   player: PublicPlayerState;
@@ -14,24 +14,31 @@ interface Props {
 }
 
 function splitHand(hand: Card[]): { actionMod: Card[]; numbers: Card[] } {
-  const actionMod = hand.filter((c) => c.type === 'action' || c.type === 'modifier');
-  const numbers = hand.filter((c) => c.type === 'number');
+  const actionMod = hand.filter(
+    (c) => c.type === "action" || c.type === "modifier",
+  );
+  const numbers = hand.filter((c) => c.type === "number");
   return { actionMod, numbers };
 }
 
 export default function SelfPanel({
-  player, rank, roomId, isYourTurn, isFlipThree, turnExpiresAt,
+  player,
+  rank,
+  roomId,
+  isYourTurn,
+  isFlipThree,
+  turnExpiresAt,
 }: Props) {
   const { actionMod, numbers } = splitHand(player.hand);
-  const isBusted = player.status === 'busted';
-  const showActions = isYourTurn && (player.status === 'active');
+  const isBusted = player.status === "busted";
+  const showActions = isYourTurn && player.status === "active";
 
   return (
     <div
       className="flex flex-col gap-3 px-4 py-3"
       style={{
-        background: 'var(--color-panel-bg)',
-        borderTop: '2px solid var(--color-panel-border)',
+        background: "var(--color-panel-bg)",
+        borderTop: "2px solid var(--color-panel-border)",
       }}
     >
       {/* Header row */}
@@ -49,14 +56,17 @@ export default function SelfPanel({
       {showActions && turnExpiresAt !== null ? (
         <TurnTimer expiresAt={turnExpiresAt} />
       ) : (
-        <p className="text-xs text-slate-500" style={{ fontFamily: 'var(--font-fredoka)' }}>
+        <p
+          className="text-xs text-slate-500"
+          style={{ fontFamily: "var(--font-fredoka)" }}
+        >
           {isBusted
-            ? 'You busted this round'
-            : player.status === 'stayed'
-            ? 'You stayed'
-            : player.status === 'frozen'
-            ? 'You are frozen'
-            : '○ Waiting...'}
+            ? "You busted this round"
+            : player.status === "stayed"
+              ? "You stayed"
+              : player.status === "frozen"
+                ? "You are frozen"
+                : "○ Waiting..."}
         </p>
       )}
 
@@ -77,9 +87,7 @@ export default function SelfPanel({
       </div>
 
       {/* Action buttons */}
-      {showActions && (
-        <ActionBar roomId={roomId} isFlipThree={isFlipThree} />
-      )}
+      {showActions && <ActionBar roomId={roomId} isFlipThree={isFlipThree} />}
     </div>
   );
 }

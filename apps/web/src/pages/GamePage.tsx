@@ -1,17 +1,17 @@
-import { useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { AnimatePresence } from 'framer-motion';
-import { usePlayerStore } from '../store/usePlayerStore';
-import { useGameStore } from '../store/useGameStore';
-import { getGameSocket, disconnectGameSocket } from '../lib/socket';
-import { useGameEvents } from '../hooks/useGameEvents';
-import GameHeader from '../components/game/GameHeader';
-import OpponentPanel from '../components/game/OpponentPanel';
-import SelfPanel from '../components/game/SelfPanel';
-import BustWarningModal from '../components/game/BustWarningModal';
-import SelectTargetModal from '../components/game/SelectTargetModal';
-import RoundEndOverlay from '../components/game/RoundEndOverlay';
-import GameOverScreen from '../components/game/GameOverScreen';
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
+import { AnimatePresence } from "framer-motion";
+import { usePlayerStore } from "../store/usePlayerStore";
+import { useGameStore } from "../store/useGameStore";
+import { getGameSocket, disconnectGameSocket } from "../lib/socket";
+import { useGameEvents } from "../hooks/useGameEvents";
+import GameHeader from "../components/game/GameHeader";
+import OpponentPanel from "../components/game/OpponentPanel";
+import SelfPanel from "../components/game/SelfPanel";
+import BustWarningModal from "../components/game/BustWarningModal";
+import SelectTargetModal from "../components/game/SelectTargetModal";
+import RoundEndOverlay from "../components/game/RoundEndOverlay";
+import GameOverScreen from "../components/game/GameOverScreen";
 
 export default function GamePage() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -47,39 +47,59 @@ export default function GamePage() {
   }, [playerId, roomId, resetGame]);
 
   // Derive ranks from cumulative scores
-  function getRanks(playerStates: NonNullable<typeof gameState>['playerStates']): Record<string, number> {
-    const sorted = [...playerStates].sort((a, b) => b.totalScore - a.totalScore);
+  function getRanks(
+    playerStates: NonNullable<typeof gameState>["playerStates"],
+  ): Record<string, number> {
+    const sorted = [...playerStates].sort(
+      (a, b) => b.totalScore - a.totalScore,
+    );
     const ranks: Record<string, number> = {};
-    sorted.forEach((p, i) => { ranks[p.playerId] = i + 1; });
+    sorted.forEach((p, i) => {
+      ranks[p.playerId] = i + 1;
+    });
     return ranks;
   }
 
   // Build display name map from current playerStates
   function getPlayerNames(): Record<string, string> {
     if (!gameState) return {};
-    return Object.fromEntries(gameState.playerStates.map((p) => [p.playerId, p.displayName]));
+    return Object.fromEntries(
+      gameState.playerStates.map((p) => [p.playerId, p.displayName]),
+    );
   }
 
   if (!gameState) {
     return (
-      <div className="flex h-dvh items-center justify-center" style={{ background: 'var(--color-table-bg)' }}>
-        <p className="text-slate-400" style={{ fontFamily: 'var(--font-fredoka)' }}>Connecting...</p>
+      <div
+        className="flex h-dvh items-center justify-center"
+        style={{ background: "var(--color-table-bg)" }}
+      >
+        <p
+          className="text-slate-400"
+          style={{ fontFamily: "var(--font-fredoka)" }}
+        >
+          Connecting...
+        </p>
       </div>
     );
   }
 
-  const selfPlayer = gameState.playerStates.find((p) => p.playerId === yourPlayerId);
-  const opponents = gameState.playerStates.filter((p) => p.playerId !== yourPlayerId);
+  const selfPlayer = gameState.playerStates.find(
+    (p) => p.playerId === yourPlayerId,
+  );
+  const opponents = gameState.playerStates.filter(
+    (p) => p.playerId !== yourPlayerId,
+  );
   const ranks = getRanks(gameState.playerStates);
   const playerNames = getPlayerNames();
 
   const isYourTurn = gameState.activePlayerId === yourPlayerId;
-  const isFlipThree = gameState.phase === 'flip_three' && isYourTurn;
+  const isFlipThree = gameState.phase === "flip_three" && isYourTurn;
 
   return (
     <main
       className="flex flex-col h-dvh overflow-hidden relative"
-      style={{ background: 'var(--color-table-bg)' }}
+      style={{ background: "var(--color-table-bg)" }}
     >
       {/* Sticky header */}
       <GameHeader

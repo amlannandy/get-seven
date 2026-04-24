@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import type { RoomPlayer } from '@flip7/shared';
+import { create } from "zustand";
+import type { RoomPlayer } from "@flip7/shared";
 
 interface RoomState {
   roomId: string | null;
@@ -43,8 +43,7 @@ export const useRoomStore = create<RoomState>()((set) => ({
 
   setPlayers: (players) => set({ players }),
 
-  addPlayer: (player) =>
-    set((s) => ({ players: [...s.players, player] })),
+  addPlayer: (player) => set((s) => ({ players: [...s.players, player] })),
 
   removePlayer: (playerId, newHostId) =>
     set((s) => ({

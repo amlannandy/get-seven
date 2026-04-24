@@ -1,16 +1,21 @@
-import { AnimatePresence } from 'framer-motion';
-import type { Card } from '@flip7/shared';
-import CardComponent from './CardComponent';
+import { AnimatePresence } from "framer-motion";
+import type { Card } from "@flip7/shared";
+import CardComponent from "./CardComponent";
 
 interface Props {
   cards: Card[];
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   dimmed?: boolean;
   /** Optional prefix for stable layoutIds */
   idPrefix?: string;
 }
 
-export default function CardRow({ cards, size = 'md', dimmed = false, idPrefix = '' }: Props) {
+export default function CardRow({
+  cards,
+  size = "md",
+  dimmed = false,
+  idPrefix = "",
+}: Props) {
   if (cards.length === 0) return null;
 
   return (
