@@ -71,15 +71,9 @@ Open [http://localhost:5173](http://localhost:5173) to play.
 
 ---
 
-## Recording
-
-https://github.com/user-attachments/assets/flip-7-demo
-
-> **Note:** Replace the URL above with the actual uploaded asset URL after uploading `recordings/Flip 7.mov` to the GitHub release or issue.
-
----
-
 ## Game Rules
+
+https://github.com/user-attachments/assets/a160c4e3-0658-4e78-898b-de9a0308ba0e
 
 ### Objective
 
